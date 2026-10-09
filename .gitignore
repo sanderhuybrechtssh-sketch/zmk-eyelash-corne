@@ -3,3 +3,7 @@ zmk/
 modules/
 tools/
 .west/
+
+# Downloaded firmware builds
+firmware/
+firmware-*/
