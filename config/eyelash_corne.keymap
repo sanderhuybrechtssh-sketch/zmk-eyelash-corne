@@ -1,5 +1,16 @@
-#define ZMK_POINTING_DEFAULT_MOVE_VAL 1200  // 600
-#define ZMK_POINTING_DEFAULT_SCRL_VAL 25   // 10
+// Eyelash Corne — port of C:\Users\sander\Tools\kanata.kbd
+// Colemak-DH (your variant) + bilateral home row mods + nav layer + mouse layer.
+// Windows layout stays "English (UK)"; the SYM layer uses UK-correct keycodes.
+//
+// Key positions (48):
+//  0  1  2  3  4  5       6       7  8  9 10 11 12
+// 13 14 15 16 17 18   19 20 21   22 23 24 25 26 27
+// 28 29 30 31 32 33   34    35   36 37 38 39 40 41
+//          42 43 44              45 46 47
+// 6/19/20/21/35 = joystick, 34 = encoder press
+
+#define ZMK_POINTING_DEFAULT_MOVE_VAL 1200
+#define ZMK_POINTING_DEFAULT_SCRL_VAL 25
 
 #include <input/processors.dtsi>
 #include <zephyr/dt-bindings/input/input-event-codes.h>
@@ -11,15 +22,99 @@
 #include <dt-bindings/zmk/pointing.h>
 #include <dt-bindings/zmk/rgb.h>
 
+#define BASE  0
+#define NUM   1
+#define SYM   2
+#define FN    3
+#define NAV   4
+#define MOUSE 5
+
+#define KEYS_L 0 1 2 3 4 5 13 14 15 16 17 18 28 29 30 31 32 33
+#define KEYS_R 7 8 9 10 11 12 22 23 24 25 26 27 36 37 38 39 40 41
+#define THUMBS 42 43 44 45 46 47 6 19 20 21 34 35
+
 &soft_off { hold-time-ms = <2000>; };
 
 / {
     behaviors {
-        td0: td0 {
-            compatible = "zmk,behavior-tap-dance";
-            display-name = "Shift/Caps Lock Tap Dance";
+        // Home row mods: hold only fires when a key on the OTHER hand (or a thumb) is pressed.
+        // tapping-term = your kanata hold-time, quick-tap = tap-time.
+        hml: hml {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            flavor = "balanced";
+            tapping-term-ms = <240>;
+            quick-tap-ms = <160>;
+            require-prior-idle-ms = <150>;
+            hold-trigger-key-positions = <KEYS_R THUMBS>;
+            hold-trigger-on-release;
+            bindings = <&kp>, <&kp>;
+        };
+        hmr: hmr {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            flavor = "balanced";
+            tapping-term-ms = <240>;
+            quick-tap-ms = <160>;
+            require-prior-idle-ms = <150>;
+            hold-trigger-key-positions = <KEYS_L THUMBS>;
+            hold-trigger-on-release;
+            bindings = <&kp>, <&kp>;
+        };
+        // Shift variants (t / n) use the shorter 200 ms hold time.
+        hmls: hmls {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            flavor = "balanced";
+            tapping-term-ms = <200>;
+            quick-tap-ms = <160>;
+            require-prior-idle-ms = <150>;
+            hold-trigger-key-positions = <KEYS_R THUMBS>;
+            hold-trigger-on-release;
+            bindings = <&kp>, <&kp>;
+        };
+        hmrs: hmrs {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            flavor = "balanced";
+            tapping-term-ms = <200>;
+            quick-tap-ms = <160>;
+            require-prior-idle-ms = <150>;
+            hold-trigger-key-positions = <KEYS_L THUMBS>;
+            hold-trigger-on-release;
+            bindings = <&kp>, <&kp>;
+        };
+
+        // ':' normally, ';' with Alt (Alt kept, for Neru) ...
+        colon_alt: colon_alt {
+            compatible = "zmk,behavior-mod-morph";
             #binding-cells = <0>;
-            bindings = <&kp LEFT_SHIFT>, <&kp CAPS>;
+            bindings = <&kp COLON>, <&kp SEMI>;
+            mods = <(MOD_LALT|MOD_RALT)>;
+            keep-mods = <(MOD_LALT|MOD_RALT)>;
+        };
+        // ... and plain ';' with Shift (Shift is removed).
+        scln: scln {
+            compatible = "zmk,behavior-mod-morph";
+            #binding-cells = <0>;
+            bindings = <&colon_alt>, <&kp SEMI>;
+            mods = <(MOD_LSFT|MOD_RSFT)>;
+        };
+
+        // PgUp/PgDn, or Ctrl+Left/Right while Super is held (Win+Ctrl+arrow = switch desktop).
+        vd_up: vd_up {
+            compatible = "zmk,behavior-mod-morph";
+            #binding-cells = <0>;
+            bindings = <&kp PG_UP>, <&kp LC(LEFT)>;
+            mods = <(MOD_LGUI|MOD_RGUI)>;
+            keep-mods = <(MOD_LGUI|MOD_RGUI)>;
+        };
+        vd_dn: vd_dn {
+            compatible = "zmk,behavior-mod-morph";
+            #binding-cells = <0>;
+            bindings = <&kp PG_DN>, <&kp LC(RIGHT)>;
+            mods = <(MOD_LGUI|MOD_RGUI)>;
+            keep-mods = <(MOD_LGUI|MOD_RGUI)>;
         };
 
         rsr_vol: rsr_vol {
@@ -29,7 +124,6 @@
             cw-binding = <&kp C_VOL_UP>;
             ccw-binding = <&kp C_VOL_DN>;
         };
-
         rsr_trans: rsr_trans {
             compatible = "zmk,behavior-runtime-sensor-rotate";
             #sensor-binding-cells = <0>;
@@ -37,9 +131,8 @@
         };
     };
 
-   combos {
+    combos {
         compatible = "zmk,combos";
-
         softoff {
             bindings = <&soft_off>;
             key-positions = <1 15 29>;
@@ -49,43 +142,41 @@
     keymap {
         compatible = "zmk,keymap";
 
-        default_layer {
-            display-name = "QWERTY";
+        base_layer {
+            display-name = "Colemak";
             bindings = <
-&kp TAB    &kp Q  &kp W  &kp E     &kp R  &kp T                               &kp UP                &kp Y        &kp U  &kp I      &kp O    &kp P     &kp BSPC
-&td0       &kp A  &kp S  &kp D     &kp F  &kp G                     &kp LEFT  &kp ENTER  &kp RIGHT  &kp H        &kp J  &kp K      &kp L    &kp SEMI  &kp SQT
-&kp LCTRL  &kp Z  &kp X  &kp C     &kp V  &kp B        &kp SPACE              &kp DOWN              &kp N        &kp M  &kp COMMA  &kp DOT  &kp FSLH  &kp ESC
-                         &kp LGUI  &mo 1  &lt 3 SPACE                                               &lt 3 ENTER  &mo 2  &kp RALT
+&kp TAB          &kp Q            &kp W            &kp F              &kp P              &kp B                                &kp UP              &scln     &kp L              &kp U              &kp Y            &kp M            &kp BSPC
+&mo NAV          &hml LGUI A      &hml LALT R      &hml LCTRL S       &hmls LSHFT T      &kp G               &kp LEFT  &kp ENTER  &kp RIGHT    &kp J     &hmrs RSHFT N      &hmr RCTRL E       &hmr LALT I      &hmr RGUI O      &kp SQT
+&kp NON_US_BSLH  &kp Z            &kp X            &kp C              &kp D              &kp V        &kp SPACE              &kp DOWN              &kp K     &kp H              &kp COMMA          &kp DOT          &kp FSLH         &kp ESC
+                                                   &mo NUM            &mo MOUSE          &lt FN SPACE                                              &lt FN ENTER       &mo SYM            &kp RALT
             >;
-
             sensor-bindings = <&rsr_vol &rsr_trans>;
         };
 
-        lower_layer {
-            display-name = "NUMBER";
+        num_layer {
+            display-name = "Number";
             bindings = <
 &trans  &kp N1           &kp N2          &kp N3        &kp N4        &kp N5                                         &mmv MOVE_UP                     &kp N6           &kp N7           &kp N8           &kp N9           &kp N0    &kp BSPC
 &trans  &bt BT_CLR_ALL   &bt BT_SEL 0    &bt BT_SEL 1  &bt BT_SEL 2  &bt BT_SEL 3                   &mmv MOVE_LEFT  &mkp LCLK       &mmv MOVE_RIGHT  &kp LEFT         &kp DOWN         &kp UP           &kp RIGHT        &kp HOME  &kp PG_UP
 &trans  &rgb_ug RGB_OFF  &rgb_ug RGB_ON  &trans        &trans        &rgb_ug RGB_EFF  &kp C_MUTE                    &mmv MOVE_DOWN                   &rgb_ug RGB_EFR  &rgb_ug RGB_SPI  &rgb_ug RGB_BRI  &rgb_ug RGB_BRD  &kp END   &kp PG_DN
                                          &trans        &trans        &trans                                                                          &kp INS          &kp DEL          &trans
             >;
-
             sensor-bindings = <&rsr_vol &rsr_trans>;
         };
 
-        raise_layer {
-            display-name = "SYMBOL";
+        // UK layout: @ = Shift+', # and ~ = the ISO hash key, \ and | = the ISO key left of Z
+        sym_layer {
+            display-name = "Symbol";
             bindings = <
-&trans  &kp EXCL      &kp AT        &kp HASH   &kp DLLR   &kp PRCNT                            &mmv MOVE_UP                     &kp CARET  &kp AMPS   &kp ASTRK  &kp LPAR  &kp RPAR  &kp BSPC
-&trans  &bt BT_CLR    &mkp LCLK     &mkp MCLK  &mkp RCLK  &mkp MB4             &mmv MOVE_LEFT  &mkp LCLK       &mmv MOVE_RIGHT  &kp MINUS  &kp EQUAL  &kp LBKT   &kp RBKT  &kp BSLH  &kp GRAVE
-&trans  &out OUT_USB  &out OUT_BLE  &none      &none      &mkp MB5   &trans                    &mmv MOVE_DOWN                   &kp UNDER  &kp PLUS   &kp LBRC   &kp RBRC  &kp PIPE  &kp TILDE
-                                    &trans     &trans     &kp SPACE                                                             &kp RET    &trans     &trans
+&trans  &kp EXCL      &kp LS(SQT)   &kp NON_US_HASH  &kp DLLR   &kp PRCNT                            &mmv MOVE_UP                     &kp CARET  &kp AMPS   &kp ASTRK  &kp LPAR  &kp RPAR             &kp BSPC
+&trans  &bt BT_CLR    &mkp LCLK     &mkp MCLK        &mkp RCLK  &mkp MB4             &mmv MOVE_LEFT  &mkp LCLK       &mmv MOVE_RIGHT  &kp MINUS  &kp EQUAL  &kp LBKT   &kp RBKT  &kp NON_US_BSLH      &kp GRAVE
+&trans  &out OUT_USB  &out OUT_BLE  &kp LS(N2)       &none      &mkp MB5   &trans                    &mmv MOVE_DOWN                   &kp UNDER  &kp PLUS   &kp LBRC   &kp RBRC  &kp LS(NON_US_BSLH)  &kp LS(NON_US_HASH)
+                                    &trans           &trans     &kp SPACE                                                             &kp RET    &trans     &trans
             >;
-
             sensor-bindings = <&rsr_vol &rsr_trans>;
         };
 
-        layer_3 {
+        fn_layer {
             display-name = "Fn";
             bindings = <
 &studio_unlock  &kp F1      &kp F2     &kp F3       &kp F4     &kp F5                                  &mmv MOVE_UP                     &kp F6       &kp F7     &kp F8       &kp F9      &kp F10          &kp F11
@@ -93,7 +184,30 @@
 &trans          &sys_reset  &trans     &bootloader  &trans     &mkp MB5  &kp C_MUTE                    &mmv MOVE_DOWN                   &trans       &trans     &bootloader  &sys_reset  &kp SCROLLLOCK   &kp PAUSE_BREAK
                                        &trans       &trans     &trans                                                                   &trans       &trans     &trans
             >;
+            sensor-bindings = <&rsr_vol &rsr_trans>;
+        };
 
+        // Hold the caps-lock position (left of A). Same key spots as your kanata nav layer.
+        nav_layer {
+            display-name = "Nav";
+            bindings = <
+&trans  &kp N1    &kp N2    &kp N3     &kp N4     &trans                     &trans              &kp N6    &kp RIGHT  &vd_up     &kp N9    &kp N0    &trans
+&trans  &kp LGUI  &kp LALT  &kp LCTRL  &kp LSHFT  &trans            &trans   &trans   &trans     &kp DOWN  &kp RSHFT  &kp RCTRL  &kp LALT  &kp RGUI  &trans
+&trans  &trans    &trans    &trans     &trans     &trans     &trans          &trans              &kp UP    &kp LEFT   &vd_dn     &trans    &trans    &trans
+                            &trans     &trans     &trans                                         &trans    &trans     &trans
+            >;
+            sensor-bindings = <&rsr_vol &rsr_trans>;
+        };
+
+        // Hold left thumb (middle). Neru triggers on Colemak f g c s b, mouse on u n e i, scroll on j / k.
+        mouse_layer {
+            display-name = "Mouse";
+            bindings = <
+&trans  &trans  &trans   &kp F13  &trans  &kp F17                    &trans              &trans           &trans          &mmv MOVE_UP    &trans           &trans  &trans
+&trans  &trans  &trans   &kp F16  &trans  &kp F14           &trans   &trans   &trans     &msc SCRL_DOWN   &mmv MOVE_LEFT  &mmv MOVE_DOWN  &mmv MOVE_RIGHT  &trans  &trans
+&trans  &trans  &trans   &kp F15  &trans  &trans     &trans          &trans              &msc SCRL_UP     &trans          &trans          &trans           &trans  &trans
+                         &trans   &trans  &mkp LCLK                                      &mkp RCLK        &trans          &trans
+            >;
             sensor-bindings = <&rsr_vol &rsr_trans>;
         };
     };
